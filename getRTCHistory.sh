@@ -33,7 +33,7 @@ for COMPONENT_NAME in ${COMPONENT_NAMES[@]}; do
     sed -i '/^$/d' "./History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
     sed -i 's/^  ([0-9-]*://g' "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
     sed -i 's/).*$//g' "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
-    sed -i "s/^/$REPO\/resource\/itemOid\/com.example.team.scm.ChangeSet\//g" "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt"; # Change this as appropriate (see Eclipse/RTC Client history url for reference)
+    sed -i "s/^/$REPO\/resource\/itemOid\/com.example.team.scm.ChangeSet\//g" "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt"; # Change regex as appropriate (see Eclipse/RTC Client history url for reference)
     sed -i "s/$/?Workspace=$STREAM_UUID/g" "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
     echo -e "\e[1AGetting changeset urls for $COMPONENT_NAME...Done";
 done
