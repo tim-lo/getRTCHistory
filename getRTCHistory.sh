@@ -1,39 +1,78 @@
 #!/bin/bash
-REPO="$1";
-PROJECT="$2";
-STREAM_UUID="$3";
-STREAM_NAME="";
-USER="$4";
-PASS="$5";
+REPO=$1
+PROJECT=$2
+STREAM_NAME=$3
+USER=$4
+PASS=$5
 
-# Get the list of components
-echo "Getting list of components for $STREAM_UUID...";
-scm --show-alias n --show-uuid n list components -r "$REPO" --projectarea "$PROJECT" -u "$USER" -P "$PASS" > .components;
-sed -i 's/^ "//g' .components;
-sed -i 's/"$//g' .components;
-echo -e "\e[1AGetting list of components for $STREAM_UUID...Done";
+# check arguments
+if [ ! $# -eq 5 ]; then
+    echo "Usage:"
+    echo "  ./getRTCHistory.sh [jazzRepository] [ProjectArea] [StreamName] [User] [Password]"
+    exit 1
+fi
 
-# Get the list of changesets for each of the components (maximum=1M to make scm returns all changesets)
-OLDIFS="$IFS";
-IFS=$'\n';
-COMPONENT_NAMES=();
-while read line; do
-    COMPONENT_NAMES=("${COMPONENT_NAMES[@]}" "$line");
-done < .components
-IFS="$OLDIFS";
-
-for COMPONENT_NAME in ${COMPONENT_NAMES[@]}; do
-    COMPONENT_NAME="Drupal $COMPONENT_NAME";
-    echo "Getting changesets for $COMPONENT_NAME...";
-    scm --show-uuid y list changesets -r "$REPO" -w "$STREAM_UUID" -C "$COMPONENT_NAME" -u "$USER" -P "$PASS" -m 1000000 > "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
-    echo -e "\e[1AGetting changesets for $COMPONENT_NAME...Done";
+# preparation
+echo "Preparation"
+if [ -d ./.tmp ]; then
+    rm -rf ./.tmp;
+    echo "> Removed old .tmp directory"
+fi
+if [ ! -d ./.tmp ]; then
+    mkdir ./.tmp;
+    echo "> Created new empty .tmp directory"
+fi
+if [ -d ./History ]; then
+    rm -rf ./History;
+    echo "> Removed output directory"
+fi
+if [ ! -d ./History ]; then
     mkdir ./History;
-    echo "Getting changeset urls for $COMPONENT_NAME...";
-    sed -i 's/^Change sets:$//g' "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
-    sed -i '/^$/d' "./History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
-    sed -i 's/^  ([0-9-]*://g' "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
-    sed -i 's/).*$//g' "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
-    sed -i "s/^/$REPO\/resource\/itemOid\/com.example.team.scm.ChangeSet\//g" "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt"; # Change regex as appropriate (see Eclipse/RTC Client history url for reference)
-    sed -i "s/$/?Workspace=$STREAM_UUID/g" "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt";
-    echo -e "\e[1AGetting changeset urls for $COMPONENT_NAME...Done";
+    echo "> Created new empty output (History) directory"
+fi
+
+# get stream UUID
+echo "> Get UUID of Stream: $STREAM_NAME"
+STREAM_UUID=`scm list streams -r "$REPO" --projectarea "$PROJECT" -u "$USER" -P "$PASS" | grep "$STREAM_NAME" | cut -f1 -d ')' | cut -f2 -d '('`
+echo "> > Got Stream's UUID: $STREAM_UUID"
+echo "Preparation...Done"
+
+# Get the list of components from JAZZ
+echo
+echo "Get list of components"
+echo "> List of components for: ($STREAM_UUID) $STREAM_NAME...";
+lscm ls comp -r "$REPO" -u "$USER" -P "$PASS" $STREAM_NAME > ./.tmp/components_jazz
+grep -rnw "./.tmp/components_jazz" -e "Component" | cut -f2 -d'"' > ./.tmp/components
+echo "Get list of components...Done"
+
+# Read components from .components
+echo
+echo "Reading components names...";
+COMPONENT_NAMES=""
+while read line; do
+    COMPONENT_NAMES=("${COMPONENT_NAMES[@]}" "$line")
+done < ./.tmp/components
+echo "Reading components names...Done"
+
+# get changesets for component
+echo
+echo "Getting changesets...";
+for COMPONENT_NAME in ${COMPONENT_NAMES[@]}; do  
+    echo "> Getting changesets for component: '$COMPONENT_NAME' ..."
+    scm --show-uuid y list changesets -r "$REPO" -w "$STREAM_UUID" -C "$COMPONENT_NAME" -u "$USER" -P "$PASS" -m 1000000 > "./.tmp/History_${COMPONENT_NAME}_${STREAM_NAME}.changesets"
+    #cp "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.changesets" "./History/History_${COMPONENT_NAME}_${STREAM_UUID}.txt"
+    echo "> Getting changesets for component: '$COMPONENT_NAME' ...Done"
 done
+echo "Getting changesets...Done"
+
+# get changesets UUID
+echo
+echo "Getting UUIDs from changesets"
+for COMPONENT_NAME in ${COMPONENT_NAMES[@]}; do
+    echo "> Getting changeset urls for $COMPONENT_NAME..."
+    IN_FILE="./.tmp/History_${COMPONENT_NAME}_${STREAM_NAME}.changesets"
+    OUT_FILE="./History/History_${COMPONENT_NAME}_${STREAM_NAME}.txt"
+    grep -rnw "$IN_FILE" -e "----" | cut -f2 -d'(' | cut -f2 -d':' | cut -f1 -d')' > $OUT_FILE
+    echo "> Getting changeset urls for $COMPONENT_NAME...Done"
+done
+echo "Getting UUIDs from changesets...Done"
