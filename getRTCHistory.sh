@@ -41,7 +41,7 @@ echo "Preparation...Done"
 echo
 echo "Get list of components"
 echo "> List of components for: ($STREAM_UUID) $STREAM_NAME...";
-lscm ls comp -r "$REPO" -u "$USER" -P "$PASS" $STREAM_NAME > ./.tmp/components_jazz
+lscm ls comp -r "$REPO" -u "$USER" -P "$PASS" "$STREAM_NAME" > ./.tmp/components_jazz
 grep -rnw "./.tmp/components_jazz" -e "Component" | cut -f2 -d'"' > ./.tmp/components
 echo "Get list of components...Done"
 
