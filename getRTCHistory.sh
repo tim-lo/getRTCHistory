@@ -54,6 +54,8 @@ while read line; do
 done < ./.tmp/components
 echo "Reading components names...Done"
 
+OLDIFS=$IFS
+IFS=$'\n'       # make newlines the only separator
 # get changesets for component
 echo
 echo "Getting changesets...";
@@ -76,3 +78,4 @@ for COMPONENT_NAME in ${COMPONENT_NAMES[@]}; do
     echo "> Getting changeset urls for $COMPONENT_NAME...Done"
 done
 echo "Getting UUIDs from changesets...Done"
+IFS=$OLDIFS
