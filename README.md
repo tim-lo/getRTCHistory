@@ -1,4 +1,3 @@
-# About getRTCHistory
 Simple bash script which produces changesets history of components of RTC/Jazz repository stream for [rtc2git](https://github.com/rtcTo/rtc2git).
 
 ## Preconditions:
